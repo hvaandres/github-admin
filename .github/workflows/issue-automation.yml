@@ -38,12 +38,8 @@ jobs:
             const justification = parseField('Justification');
             
             // Add comment with parsed information
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              body: `## Admin Request Received
-              
+            const commentBody = `## Admin Request Received
+
 **Requester:** ${requester}
 **Access Level:** ${accessLevel}
 **Scope:** ${scope}
@@ -60,7 +56,13 @@ Once approved, an administrator should:
 2. Add a comment: \`/approve\` to close this issue
 3. Or add a comment: \`/deny [reason]\` to reject
 
-For organization-wide changes, please ensure you have the necessary permissions.`
+For organization-wide changes, please ensure you have the necessary permissions.`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: commentBody
             });
             
             // Add 'needs-review' label
