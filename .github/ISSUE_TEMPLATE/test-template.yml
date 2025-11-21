@@ -1,0 +1,13 @@
+name: Test Template
+description: A simple test template
+title: "[TEST] "
+labels: ["test"]
+body:
+  - type: input
+    id: test-input
+    attributes:
+      label: Test Input
+      description: Just a test
+      placeholder: "Enter something"
+    validations:
+      required: true
