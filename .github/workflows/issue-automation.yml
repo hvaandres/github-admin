@@ -213,6 +213,108 @@ Once completed, comment \`/done\` to close this issue.`;
               labels: ['needs-action']
             });
             
+            return {
+              repoName,
+              description,
+              visibility: visibility.toLowerCase(),
+              protectedBranch,
+              requiredReviewers: requiredReviewers || '1',
+              owners,
+              teams,
+              branchProtectionRules
+            };
+            
+      - name: Create repository
+        id: create_repo
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const repoName = '${{ steps.parse.outputs.repo_name }}';
+            const description = '${{ steps.parse.outputs.description }}';
+            const visibility = '${{ steps.parse.outputs.visibility }}';
+            const protectedBranch = '${{ steps.parse.outputs.protected_branch }}';
+            const requiredReviewers = parseInt('${{ steps.parse.outputs.required_reviewers }}');
+            
+            try {
+              // Create repository
+              const createRepoResponse = await github.rest.repos.createForAuthenticatedUser({
+                name: repoName,
+                description: description,
+                private: visibility === 'private',
+                auto_init: true
+              });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body: `✅ Repository **${context.repo.owner}/${repoName}** has been created!\n\nRepository URL: ${createRepoResponse.data.html_url}`
+              });
+              
+              // Wait a bit for repo initialization
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              
+              // Configure branch protection
+              try {
+                await github.rest.repos.updateBranchProtection({
+                  owner: context.repo.owner,
+                  repo: repoName,
+                  branch: protectedBranch,
+                  required_status_checks: null,
+                  enforce_admins: false,
+                  required_pull_request_reviews: {
+                    required_approving_review_count: requiredReviewers
+                  },
+                  restrictions: null
+                });
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  body: `✅ Branch protection configured for \`${protectedBranch}\` branch.`
+                });
+              } catch (protectionError) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  body: `⚠️ Repository created but branch protection failed: ${protectionError.message}\n\nYou may need to configure it manually.`
+                });
+              }
+              
+              // Close the issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                state: 'closed'
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: ['completed']
+              });
+              
+            } catch (error) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body: `❌ Failed to create repository: ${error.message}\n\nPlease create the repository manually using the commands provided earlier.`
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: ['failed']
+              });
+            }
+            
       - name: Remove pending label
         uses: actions/github-script@v7
         with:
