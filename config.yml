@@ -1,0 +1,127 @@
+# GitHub Admin Repository Configuration
+# This file defines default settings for automated repository creation and management
+
+# Default repository settings
+repository:
+  default_visibility: private
+  default_branch: main
+  auto_init: true
+  
+  # Default branch protection rules
+  branch_protection:
+    enabled: true
+    protected_branches:
+      - main
+      - master
+    
+    # Pull request reviews
+    require_pull_request_reviews: true
+    required_approving_review_count: 1
+    dismiss_stale_reviews: true
+    require_code_owner_reviews: false
+    
+    # Status checks
+    require_status_checks: false
+    strict_status_checks: false
+    required_status_checks: []
+    
+    # Additional restrictions
+    enforce_admins: false
+    require_linear_history: false
+    allow_force_pushes: false
+    allow_deletions: false
+    require_signed_commits: false
+    require_conversation_resolution: true
+    
+  # Default files to create
+  initial_files:
+    - README.md
+    
+  # Optional files
+  optional_files:
+    gitignore_templates:
+      - Node
+      - Python
+      - Java
+      - Go
+      - Ruby
+      - Rust
+    license_templates:
+      - MIT
+      - Apache-2.0
+      - GPL-3.0
+      - BSD-3-Clause
+
+# Permission levels
+permissions:
+  levels:
+    read: pull
+    write: push
+    admin: admin
+    maintain: maintain
+    triage: triage
+    
+  # Default team permissions
+  default_team_permission: write
+
+# Admin request settings
+admin_requests:
+  # Require approval from these users/teams
+  approvers:
+    - owner
+    - admin-team
+  
+  # Auto-approve for these users (empty by default for security)
+  auto_approve_users: []
+  
+  # Notification settings
+  notify_on_request: true
+  notification_channel: github-issues
+
+# Automation settings
+automation:
+  # Automatically add labels
+  auto_label: true
+  
+  # Automatically assign issues
+  auto_assign: false
+  default_assignees: []
+  
+  # Workflow settings
+  workflows_enabled: true
+  
+# Organization settings (if applicable)
+organization:
+  # Default organization (leave empty to use user's personal account)
+  default_org: ""
+  
+  # Team settings
+  default_teams: []
+  
+# Compliance and security
+compliance:
+  # Require specific files in all repositories
+  required_files:
+    - README.md
+  
+  # Security settings
+  require_2fa: false
+  vulnerability_alerts: true
+  automated_security_fixes: true
+  
+# Naming conventions
+naming:
+  # Repository name pattern (regex)
+  repo_name_pattern: "^[a-z0-9-]+$"
+  
+  # Branch name patterns
+  allowed_branch_patterns:
+    - main
+    - master
+    - develop
+    - release/*
+    - hotfix/*
+    - feature/*
+    - bugfix/*
+    - dev/*
+    - test/*

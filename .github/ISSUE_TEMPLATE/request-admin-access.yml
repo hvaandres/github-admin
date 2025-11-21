@@ -1,0 +1,74 @@
+name: Request Administrator Access
+description: Request administrator access to manage groups, security, and users
+title: "[ADMIN REQUEST] "
+labels: ["admin-request", "pending"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Request Administrator Access
+        Use this form to request administrator privileges for repository management.
+        
+  - type: input
+    id: requester
+    attributes:
+      label: GitHub Username
+      description: Your GitHub username
+      placeholder: "@username"
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: access-level
+    attributes:
+      label: Access Level
+      description: Select the level of access you need
+      options:
+        - Repository Administrator
+        - Organization Administrator
+        - Team Administrator
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: repository
+    attributes:
+      label: Repository/Organization Scope
+      description: Where do you need admin access?
+      options:
+        - Specific Repository
+        - Organization-wide
+        - Team-level
+    validations:
+      required: true
+      
+  - type: input
+    id: scope-name
+    attributes:
+      label: Repository/Organization/Team Name
+      description: Name of the repository, organization, or team
+      placeholder: "e.g., my-org/my-repo or my-team"
+    validations:
+      required: true
+      
+  - type: textarea
+    id: justification
+    attributes:
+      label: Justification
+      description: Why do you need administrator access?
+      placeholder: Explain the reason for this request
+    validations:
+      required: true
+      
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: Required Permissions
+      description: Select the permissions you need
+      options:
+        - label: Manage users and teams
+        - label: Configure security settings
+        - label: Create and delete repositories
+        - label: Manage branch protection rules
+        - label: Configure webhooks and integrations
+        - label: Manage organization settings

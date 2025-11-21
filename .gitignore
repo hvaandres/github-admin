@@ -1,0 +1,37 @@
+# GitHub Admin Repository - .gitignore
+
+# Environment variables and secrets
+.env
+.env.local
+*.key
+*.pem
+secrets/
+
+# GitHub tokens
+.github-token
+token.txt
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.backup

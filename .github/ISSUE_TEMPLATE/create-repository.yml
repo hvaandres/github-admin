@@ -1,0 +1,150 @@
+name: Create New Repository
+description: Request creation of a new repository with protection rules and README
+title: "[NEW REPO] "
+labels: ["repo-creation", "pending"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Create New Repository
+        Use this form to request a new repository with automatic setup including README, branch protection, and owner assignment.
+        
+  - type: input
+    id: repo-name
+    attributes:
+      label: Repository Name
+      description: Name for the new repository (lowercase, hyphens allowed)
+      placeholder: "my-new-repo"
+    validations:
+      required: true
+      
+  - type: textarea
+    id: repo-description
+    attributes:
+      label: Repository Description
+      description: Brief description of the repository
+      placeholder: "A brief description of what this repository is for"
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: visibility
+    attributes:
+      label: Repository Visibility
+      description: Should this repository be public or private?
+      options:
+        - Private
+        - Public
+      default: 0
+    validations:
+      required: true
+      
+  - type: input
+    id: protected-branch
+    attributes:
+      label: Branch to Protect
+      description: Name of the branch that should be protected (typically 'main' or 'master')
+      placeholder: "main"
+      value: "main"
+    validations:
+      required: true
+      
+  - type: checkboxes
+    id: branch-protection
+    attributes:
+      label: Branch Protection Rules
+      description: Select the protection rules to apply
+      options:
+        - label: Require pull request reviews before merging
+          required: false
+        - label: Require status checks to pass before merging
+          required: false
+        - label: Require conversation resolution before merging
+          required: false
+        - label: Require signed commits
+          required: false
+        - label: Require linear history
+          required: false
+        - label: Include administrators in restrictions
+          required: false
+          
+  - type: input
+    id: required-reviewers
+    attributes:
+      label: Required Number of Reviewers
+      description: Number of required approving reviews (0-6)
+      placeholder: "1"
+      value: "1"
+    validations:
+      required: false
+      
+  - type: textarea
+    id: owners
+    attributes:
+      label: Repository Owners
+      description: GitHub usernames of people who should have admin access (one per line, with @ prefix)
+      placeholder: |
+        @username1
+        @username2
+        @username3
+    validations:
+      required: true
+      
+  - type: textarea
+    id: teams
+    attributes:
+      label: Teams with Access
+      description: Team names that should have access (one per line, format as 'team-name:permission' where permission is read, write, or admin)
+      placeholder: |
+        engineering:write
+        devops:admin
+    validations:
+      required: false
+      
+  - type: checkboxes
+    id: initial-files
+    attributes:
+      label: Initial Files to Create
+      description: Select files to include in the initial commit
+      options:
+        - label: README.md (required, always created)
+          required: true
+        - label: .gitignore
+          required: false
+        - label: LICENSE
+          required: false
+        - label: CONTRIBUTING.md
+          required: false
+        - label: CODE_OF_CONDUCT.md
+          required: false
+          
+  - type: dropdown
+    id: gitignore-template
+    attributes:
+      label: .gitignore Template
+      description: Select a .gitignore template (if applicable)
+      options:
+        - None
+        - Node
+        - Python
+        - Java
+        - Go
+        - Ruby
+        - Rust
+        - C++
+        - C#
+      default: 0
+      
+  - type: dropdown
+    id: license-template
+    attributes:
+      label: License Template
+      description: Select a license template (if applicable)
+      options:
+        - None
+        - MIT
+        - Apache-2.0
+        - GPL-3.0
+        - BSD-3-Clause
+        - BSD-2-Clause
+      default: 0

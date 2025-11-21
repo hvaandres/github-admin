@@ -1,0 +1,310 @@
+name: Repository and Admin Automation
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  process-admin-request:
+    if: contains(github.event.issue.labels.*.name, 'admin-request')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Parse admin request
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body;
+            
+            // Parse the issue body for form fields
+            const parseField = (fieldName) => {
+              const regex = new RegExp(`### ${fieldName}\\s*\\n\\s*(.+?)(?=\\n###|$)`, 's');
+              const match = body.match(regex);
+              return match ? match[1].trim() : '';
+            };
+            
+            const requester = parseField('GitHub Username');
+            const accessLevel = parseField('Access Level');
+            const scope = parseField('Repository/Organization Scope');
+            const scopeName = parseField('Repository/Organization/Team Name');
+            const justification = parseField('Justification');
+            
+            // Add comment with parsed information
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `## Admin Request Received
+              
+**Requester:** ${requester}
+**Access Level:** ${accessLevel}
+**Scope:** ${scope}
+**Target:** ${scopeName}
+
+**Justification:**
+${justification}
+
+---
+⚠️ **Action Required:** This request needs manual approval from a repository administrator.
+
+Once approved, an administrator should:
+1. Grant the requested permissions through GitHub settings
+2. Add a comment: \`/approve\` to close this issue
+3. Or add a comment: \`/deny [reason]\` to reject
+
+For organization-wide changes, please ensure you have the necessary permissions.`
+            });
+            
+            // Add 'needs-review' label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['needs-review']
+            });
+            
+      - name: Remove pending label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                name: 'pending'
+              });
+            } catch (error) {
+              console.log('Label "pending" not found or already removed');
+            }
+
+  process-repo-creation:
+    if: contains(github.event.issue.labels.*.name, 'repo-creation')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Parse repository request
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body;
+            
+            // Parse form fields
+            const parseField = (fieldName) => {
+              const regex = new RegExp(`### ${fieldName}\\s*\\n\\s*(.+?)(?=\\n###|$)`, 's');
+              const match = body.match(regex);
+              return match ? match[1].trim() : '';
+            };
+            
+            const parseCheckboxes = (fieldName) => {
+              const section = parseField(fieldName);
+              const checked = [];
+              const lines = section.split('\n');
+              for (const line of lines) {
+                if (line.includes('- [X]') || line.includes('- [x]')) {
+                  const label = line.replace(/- \[[xX]\]/, '').trim();
+                  checked.push(label);
+                }
+              }
+              return checked;
+            };
+            
+            const repoName = parseField('Repository Name');
+            const description = parseField('Repository Description');
+            const visibility = parseField('Repository Visibility');
+            const protectedBranch = parseField('Branch to Protect');
+            const branchProtectionRules = parseCheckboxes('Branch Protection Rules');
+            const requiredReviewers = parseField('Required Number of Reviewers');
+            const owners = parseField('Repository Owners').split('\n').map(o => o.trim()).filter(o => o);
+            const teams = parseField('Teams with Access').split('\n').map(t => t.trim()).filter(t => t);
+            const initialFiles = parseCheckboxes('Initial Files to Create');
+            const gitignoreTemplate = parseField('.gitignore Template');
+            const licenseTemplate = parseField('License Template');
+            
+            // Store parsed data
+            core.setOutput('repo_name', repoName);
+            core.setOutput('description', description);
+            core.setOutput('visibility', visibility.toLowerCase());
+            core.setOutput('protected_branch', protectedBranch);
+            core.setOutput('required_reviewers', requiredReviewers || '1');
+            
+            // Create summary comment
+            let comment = `## Repository Creation Request Received
+            
+**Repository Name:** \`${repoName}\`
+**Description:** ${description}
+**Visibility:** ${visibility}
+**Protected Branch:** \`${protectedBranch}\`
+
+### Configuration
+**Branch Protection Rules:**
+${branchProtectionRules.length > 0 ? branchProtectionRules.map(r => `- ${r}`).join('\n') : '- None selected'}
+
+**Required Reviewers:** ${requiredReviewers || '1'}
+
+**Owners:**
+${owners.map(o => `- ${o}`).join('\n')}
+
+${teams.length > 0 ? `**Teams:**
+${teams.map(t => `- ${t}`).join('\n')}` : ''}
+
+**Initial Files:**
+${initialFiles.map(f => `- ${f}`).join('\n')}
+
+${gitignoreTemplate !== 'None' ? `**Gitignore Template:** ${gitignoreTemplate}` : ''}
+${licenseTemplate !== 'None' ? `**License:** ${licenseTemplate}` : ''}
+
+---
+⚠️ **Manual Action Required**
+
+To create this repository, an administrator with appropriate permissions should run:
+
+\`\`\`bash
+# Set your GitHub token
+export GITHUB_TOKEN="your_token_here"
+
+# Run the creation script
+./scripts/create-repo.sh "${repoName}" "${visibility.toLowerCase()}" "${protectedBranch}" "${description}"
+\`\`\`
+
+Or use the GitHub CLI:
+\`\`\`bash
+gh repo create ${context.repo.owner}/${repoName} --${visibility.toLowerCase()} --description "${description}"
+\`\`\`
+
+Then configure branch protection and add collaborators as specified above.
+
+Once completed, comment \`/done\` to close this issue.`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: comment
+            });
+            
+            // Add 'needs-action' label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['needs-action']
+            });
+            
+      - name: Remove pending label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                name: 'pending'
+              });
+            } catch (error) {
+              console.log('Label "pending" not found or already removed');
+            }
+
+  handle-commands:
+    if: github.event.issue.body && (startsWith(github.event.issue.body, '/approve') || startsWith(github.event.issue.body, '/deny') || startsWith(github.event.issue.body, '/done'))
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      
+    steps:
+      - name: Process command
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const comment = context.payload.comment;
+            const body = comment ? comment.body : issue.body;
+            
+            if (body.startsWith('/approve')) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '✅ Request approved and processed.'
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['approved']
+              });
+              
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            } else if (body.startsWith('/deny')) {
+              const reason = body.replace('/deny', '').trim();
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ Request denied.\n\n${reason ? `**Reason:** ${reason}` : ''}`
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['denied']
+              });
+              
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            } else if (body.startsWith('/done')) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '✅ Task completed successfully.'
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['completed']
+              });
+              
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            }

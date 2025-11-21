@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Documentation
+    url: https://docs.github.com
+    about: Official GitHub documentation for reference
+  - name: GitHub CLI Documentation
+    url: https://cli.github.com/manual/
+    about: Learn more about GitHub CLI commands
